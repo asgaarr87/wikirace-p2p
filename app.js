@@ -434,6 +434,7 @@ createRoomButton.addEventListener("click", () => {
     peerStatus.textContent = "Création du lobby...";
 
     peer.on("open", id => {
+console.log("Lobby créé :", id);
         localPlayerId = id;
 
         players = [
