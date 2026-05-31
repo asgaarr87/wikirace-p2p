@@ -55,6 +55,11 @@ button:disabled {
     font-weight: bold;
 }
 
+#inviteStatus {
+    color: #008000;
+    font-weight: bold;
+}
+
 #players {
     display: flex;
     flex-wrap: wrap;

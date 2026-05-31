@@ -42,9 +42,11 @@ const nicknameInput = document.getElementById("nicknameInput");
 const roomIdInput = document.getElementById("roomIdInput");
 const createRoomButton = document.getElementById("createRoom");
 const joinRoomButton = document.getElementById("joinRoom");
+const copyInviteButton = document.getElementById("copyInvite");
 const newGameButton = document.getElementById("newGame");
 const peerStatus = document.getElementById("peerStatus");
 const roomIdDisplay = document.getElementById("roomIdDisplay");
+const inviteStatus = document.getElementById("inviteStatus");
 const playersContainer = document.getElementById("players");
 
 // ---------------------
@@ -59,6 +61,35 @@ function getNickname() {
     }
 
     return "Joueur";
+}
+
+function getInviteLink() {
+    const url = new URL(window.location.href);
+
+    url.searchParams.set("room", roomIdInput.value.trim());
+
+    return url.toString();
+}
+
+async function copyInviteLink() {
+    const inviteLink = getInviteLink();
+
+    try {
+        await navigator.clipboard.writeText(inviteLink);
+
+        inviteStatus.textContent = "Lien copié !";
+    }
+    catch (error) {
+        console.error(error);
+
+        prompt("Copie ce lien :", inviteLink);
+    }
+}
+
+function getRoomFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+
+    return params.get("room");
 }
 
 function sendToHost(type, data = {}) {
@@ -88,18 +119,6 @@ function sendToOne(connection, type, data = {}) {
             data
         });
     }
-}
-
-function getLocalPlayer() {
-    return {
-        id: localPlayerId,
-        nickname: localNickname,
-        clicks,
-        seconds,
-        currentPage,
-        finished: false,
-        host: isHost
-    };
 }
 
 function updateLocalPlayer() {
@@ -278,7 +297,7 @@ async function loadArticle(title) {
 
         document.getElementById("article").innerHTML =
             "<h2>Erreur lors du chargement</h2>" +
-            "<p>Vérifie que tu utilises Live Server ou un serveur local, pas file://.</p>";
+            "<p>Vérifie que tu utilises Live Server ou GitHub Pages, pas file://.</p>";
     }
 }
 
@@ -433,6 +452,7 @@ createRoomButton.addEventListener("click", () => {
         roomIdDisplay.textContent = "ID : " + id;
         roomIdInput.value = id;
 
+        copyInviteButton.disabled = false;
         newGameButton.disabled = false;
 
         renderPlayers();
@@ -467,11 +487,17 @@ createRoomButton.addEventListener("click", () => {
 });
 
 // ---------------------
+// Copier invitation
+// ---------------------
+
+copyInviteButton.addEventListener("click", copyInviteLink);
+
+// ---------------------
 // Rejoindre lobby
 // ---------------------
 
-joinRoomButton.addEventListener("click", () => {
-    const roomId = roomIdInput.value.trim();
+function joinRoom(roomIdFromLink = "") {
+    const roomId = roomIdFromLink || roomIdInput.value.trim();
 
     if (!roomId) {
         alert("Entre l'ID du lobby.");
@@ -495,6 +521,7 @@ joinRoomButton.addEventListener("click", () => {
         hostConnection.on("open", () => {
             peerStatus.textContent = "Connecté au lobby";
             roomIdDisplay.textContent = "ID : " + roomId;
+            roomIdInput.value = roomId;
 
             sendToHost("player:join", {
                 id: localPlayerId,
@@ -517,6 +544,10 @@ joinRoomButton.addEventListener("click", () => {
         console.error(error);
         peerStatus.textContent = "Erreur PeerJS";
     });
+}
+
+joinRoomButton.addEventListener("click", () => {
+    joinRoom();
 });
 
 // ---------------------
@@ -698,3 +729,16 @@ function startClientGame(data) {
 
     loadArticle(startPage);
 }
+
+// ---------------------
+// Connexion automatique via lien
+// ---------------------
+
+window.addEventListener("load", () => {
+    const roomFromUrl = getRoomFromUrl();
+
+    if (roomFromUrl) {
+        roomIdInput.value = roomFromUrl;
+        peerStatus.textContent = "Lien d'invitation détecté. Clique sur Rejoindre.";
+    }
+});

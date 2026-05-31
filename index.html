@@ -20,6 +20,8 @@
         <input id="roomIdInput" placeholder="ID du lobby">
 
         <button id="joinRoom">Rejoindre</button>
+
+        <button id="copyInvite" disabled>Copier le lien d'invitation</button>
     </div>
 
     <div class="game-actions">
@@ -29,6 +31,7 @@
     <div class="room-info">
         <span id="peerStatus">Déconnecté</span>
         <span id="roomIdDisplay"></span>
+        <span id="inviteStatus"></span>
     </div>
 
     <div class="infos">
@@ -43,7 +46,7 @@
 
 <div id="article">
     <h2>Bienvenue sur WikiRace P2P</h2>
-    <p>Crée un lobby ou rejoins un ami avec son ID.</p>
+    <p>Crée un lobby, copie le lien d'invitation, puis envoie-le à tes amis.</p>
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
