@@ -1,0 +1,95 @@
+body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #f8f9fa;
+}
+
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: white;
+    border-bottom: 1px solid #ddd;
+    padding: 15px;
+}
+
+h1 {
+    margin-top: 0;
+}
+
+.lobby-panel,
+.game-actions,
+.room-info,
+.infos {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-top: 10px;
+}
+
+input {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+button {
+    padding: 10px 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #f1f1f1;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #e2e2e2;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#roomIdDisplay {
+    font-weight: bold;
+}
+
+#players {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.player-card {
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f7f7f7;
+    font-size: 14px;
+}
+
+.player-card.host {
+    border-color: #0645ad;
+}
+
+.player-card.finished {
+    background: #d7ffd7;
+}
+
+#article {
+    max-width: 1100px;
+    margin: auto;
+    padding: 20px;
+    background: white;
+}
+
+#article img {
+    max-width: 100%;
+}
+
+#article a {
+    color: #0645ad;
+    cursor: pointer;
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WikiRace P2P</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="topbar">
+    <h1>WikiRace P2P</h1>
+
+    <div class="lobby-panel">
+        <input id="nicknameInput" placeholder="Ton pseudo" maxlength="20">
+
+        <button id="createRoom">Créer un lobby</button>
+
+        <input id="roomIdInput" placeholder="ID du lobby">
+
+        <button id="joinRoom">Rejoindre</button>
+    </div>
+
+    <div class="game-actions">
+        <button id="newGame" disabled>Lancer la partie</button>
+    </div>
+
+    <div class="room-info">
+        <span id="peerStatus">Déconnecté</span>
+        <span id="roomIdDisplay"></span>
+    </div>
+
+    <div class="infos">
+        <span id="start"></span>
+        <span id="target"></span>
+        <span id="clicks">0 clic</span>
+        <span id="timer">0 s</span>
+    </div>
+
+    <div id="players"></div>
+</div>
+
+<div id="article">
+    <h2>Bienvenue sur WikiRace P2P</h2>
+    <p>Crée un lobby ou rejoins un ami avec son ID.</p>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="pages.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
