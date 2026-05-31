@@ -1,93 +1,234 @@
 body {
     margin: 0;
-    font-family: sans-serif;
-    background: #f8f9fa;
+    font-family: Inter, Arial, sans-serif;
+    background: #0f172a;
+    color: white;
 }
+
+.hidden {
+    display: none;
+}
+
+/* Écran pseudo */
+
+.name-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, #1e293b, #0f172a);
+}
+
+.name-card {
+    width: 420px;
+    max-width: 90%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 22px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+
+.name-card h1 {
+    font-size: 42px;
+    margin: 0 0 10px;
+}
+
+/* Interface principale */
 
 .topbar {
     position: sticky;
     top: 0;
     z-index: 1000;
-    background: white;
-    border-bottom: 1px solid #ddd;
-    padding: 15px;
+
+    background: rgba(15,23,42,0.96);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+
+    padding: 10px 20px 12px;
 }
 
-h1 {
-    margin-top: 0;
+.topbar h1 {
+    margin: 0 0 8px;
+    text-align: center;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: white;
 }
 
-.lobby-panel,
-.game-actions,
-.room-info,
-.infos {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
+/* Organisation compacte */
+
+.lobby-panel {
+    display: grid;
+    grid-template-columns: 140px 1fr 1fr 1fr 1fr;
+    gap: 8px;
     align-items: center;
-    margin-top: 10px;
 }
+
+.game-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.room-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.infos {
+    display: grid;
+    grid-template-columns: 1.2fr 1.2fr 0.8fr 0.8fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* Inputs */
 
 input {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.06);
+    color: white;
+    outline: none;
 }
 
+input::placeholder {
+    color: #94a3b8;
+}
+
+/* Boutons */
+
 button {
+    border: none;
+    border-radius: 10px;
     padding: 10px 14px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background: #f1f1f1;
+    background: #2563eb;
+    color: white;
+    font-weight: 800;
     cursor: pointer;
+    transition: 0.2s;
 }
 
 button:hover {
-    background: #e2e2e2;
+    transform: translateY(-1px);
+    background: #3b82f6;
 }
 
 button:disabled {
-    opacity: 0.5;
+    opacity: 0.4;
     cursor: not-allowed;
+    transform: none;
+}
+
+#createRoom {
+    background: #16a34a;
+}
+
+#joinRoom {
+    background: #7c3aed;
+}
+
+#copyInvite {
+    background: #0891b2;
+}
+
+#newGame,
+#restartGame {
+    background: #f97316;
+}
+
+/* Infos importantes */
+
+#nicknameDisplay {
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.room-info span {
+    background: rgba(255,255,255,0.08);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-weight: 700;
 }
 
 #roomIdDisplay {
-    font-weight: bold;
+    font-weight: 900;
 }
 
 #inviteStatus {
-    color: green;
-    font-weight: bold;
+    color: #22c55e;
 }
+
+/* Départ / Objectif compact */
+
+#start,
+#target {
+    padding: 12px;
+    border-radius: 14px;
+    font-weight: 900;
+    font-size: 17px;
+    text-align: center;
+}
+
+#start {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+#target {
+    background: linear-gradient(135deg, #dc2626, #991b1b);
+}
+
+#clicks,
+#timer {
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.1);
+    font-weight: 900;
+    text-align: center;
+}
+
+/* Joueurs */
 
 #players {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .player-card {
-    padding: 8px 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #f7f7f7;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 8px 12px;
     font-size: 14px;
 }
 
 .player-card.host {
-    border-color: #0645ad;
+    border-color: #3b82f6;
 }
 
 .player-card.finished {
-    background: #d7ffd7;
+    border-color: #22c55e;
+    background: rgba(34,197,94,0.18);
 }
 
+/* Article */
+
 #article {
-    max-width: 1100px;
-    margin: auto;
-    padding: 20px;
+    max-width: 1200px;
+    margin: 14px auto;
     background: white;
+    color: black;
+    border-radius: 18px;
+    padding: 28px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.25);
 }
 
 #article img {
@@ -95,23 +236,39 @@ button:disabled {
 }
 
 #article a {
-    color: #0645ad;
-    cursor: pointer;
+    color: #2563eb;
 }
 
+/* Résultats */
+
 .results {
-    padding: 20px;
+    color: black;
 }
 
 .result-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 12px;
-    background: #f8f8f8;
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 15px;
+    border: 1px solid #e2e8f0;
 }
 
 .path {
-    margin-top: 8px;
-    line-height: 1.6;
+    margin-top: 10px;
+    line-height: 1.8;
+    color: #334155;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+    .lobby-panel,
+    .game-actions,
+    .infos {
+        grid-template-columns: 1fr;
+    }
+
+    .topbar h1 {
+        font-size: 24px;
+    }
 }

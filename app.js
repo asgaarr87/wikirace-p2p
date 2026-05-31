@@ -36,7 +36,13 @@ let playerPath = [];
 
 let players = [];
 
+const nameScreen = document.getElementById("nameScreen");
+const gameScreen = document.getElementById("gameScreen");
 const nicknameInput = document.getElementById("nicknameInput");
+const confirmNicknameButton = document.getElementById("confirmNickname");
+const nicknameDisplay = document.getElementById("nicknameDisplay");
+const nameHint = document.getElementById("nameHint");
+
 const roomIdInput = document.getElementById("roomIdInput");
 const createRoomButton = document.getElementById("createRoom");
 const joinRoomButton = document.getElementById("joinRoom");
@@ -48,9 +54,46 @@ const roomIdDisplay = document.getElementById("roomIdDisplay");
 const inviteStatus = document.getElementById("inviteStatus");
 const playersContainer = document.getElementById("players");
 
-function getNickname() {
-    return nicknameInput.value.trim() || "Joueur";
+function getRoomFromUrl() {
+    return new URLSearchParams(window.location.search).get("room");
 }
+
+function showGameScreen() {
+    nameScreen.style.display = "none";
+    gameScreen.classList.remove("hidden");
+    gameScreen.style.display = "block";
+
+    nicknameDisplay.textContent = "Pseudo : " + localNickname;
+
+    window.scrollTo(0, 0);
+
+    const roomFromUrl = getRoomFromUrl();
+
+    if (roomFromUrl) {
+        roomIdInput.value = roomFromUrl;
+        peerStatus.textContent = "Lien d'invitation détecté. Clique sur Rejoindre.";
+    }
+}
+
+function confirmNickname() {
+    const nickname = nicknameInput.value.trim();
+
+    if (!nickname) {
+        nameHint.textContent = "Choisis un pseudo pour continuer.";
+        return;
+    }
+
+    localNickname = nickname;
+    showGameScreen();
+}
+
+confirmNicknameButton.addEventListener("click", confirmNickname);
+
+nicknameInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") {
+        confirmNickname();
+    }
+});
 
 function getInviteLink() {
     const url = new URL(window.location.href);
@@ -68,10 +111,6 @@ async function copyInviteLink() {
     catch {
         prompt("Copie ce lien :", link);
     }
-}
-
-function getRoomFromUrl() {
-    return new URLSearchParams(window.location.search).get("room");
 }
 
 function sendToHost(type, data = {}) {
@@ -346,7 +385,6 @@ function showFinalResults(finalPlayers) {
         html += "<div class='result-card'>";
         html += "<h3>#" + (index + 1) + " — " + player.nickname + "</h3>";
         html += "<p>" + player.seconds + " s — " + player.clicks + " clics</p>";
-
         html += "<div class='path'>";
 
         const path = player.path || [];
@@ -370,7 +408,6 @@ function showFinalResults(finalPlayers) {
 
 createRoomButton.addEventListener("click", () => {
     isHost = true;
-    localNickname = getNickname();
 
     peer = new Peer();
 
@@ -442,7 +479,6 @@ function joinRoom(roomIdFromLink = "") {
     }
 
     isHost = false;
-    localNickname = getNickname();
 
     peer = new Peer();
 
@@ -669,7 +705,6 @@ window.addEventListener("load", () => {
     const roomFromUrl = getRoomFromUrl();
 
     if (roomFromUrl) {
-        roomIdInput.value = roomFromUrl;
-        peerStatus.textContent = "Lien d'invitation détecté. Clique sur Rejoindre.";
+        nameHint.textContent = "Lien d'invitation détecté. Entre ton pseudo pour rejoindre.";
     }
 });

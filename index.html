@@ -9,41 +9,62 @@
 
 <body>
 
-<div class="topbar">
-    <h1>WikiRace P2P</h1>
+<div id="nameScreen" class="name-screen">
+    <div class="name-card">
+        <h1>WikiRace P2P</h1>
+        <p>Entre ton pseudo pour commencer.</p>
 
-    <div class="lobby-panel">
         <input id="nicknameInput" placeholder="Ton pseudo" maxlength="20">
-        <button id="createRoom">Créer un lobby</button>
-        <input id="roomIdInput" placeholder="ID du lobby">
-        <button id="joinRoom">Rejoindre</button>
-        <button id="copyInvite" disabled>Copier le lien d'invitation</button>
-    </div>
 
-    <div class="game-actions">
-        <button id="newGame" disabled>Lancer la partie</button>
-        <button id="restartGame" disabled>Restart</button>
-    </div>
+        <button id="confirmNickname">Continuer</button>
 
-    <div class="room-info">
-        <span id="peerStatus">Déconnecté</span>
-        <span id="roomIdDisplay"></span>
-        <span id="inviteStatus"></span>
+        <p id="nameHint"></p>
     </div>
-
-    <div class="infos">
-        <span id="start"></span>
-        <span id="target"></span>
-        <span id="clicks">0 clic</span>
-        <span id="timer">0 s</span>
-    </div>
-
-    <div id="players"></div>
 </div>
 
-<div id="article">
-    <h2>Bienvenue sur WikiRace P2P</h2>
-    <p>Crée un lobby, copie le lien d'invitation, puis envoie-le à tes amis.</p>
+<div id="gameScreen" class="game-screen hidden">
+
+    <div class="topbar">
+        <h1>WikiRace P2P</h1>
+
+        <div class="lobby-panel">
+            <span id="nicknameDisplay"></span>
+
+            <button id="createRoom">Créer un lobby</button>
+
+            <input id="roomIdInput" placeholder="ID du lobby">
+
+            <button id="joinRoom">Rejoindre</button>
+
+            <button id="copyInvite" disabled>Copier le lien d'invitation</button>
+        </div>
+
+        <div class="game-actions">
+            <button id="newGame" disabled>Lancer la partie</button>
+            <button id="restartGame" disabled>Restart</button>
+        </div>
+
+        <div class="room-info">
+            <span id="peerStatus">Déconnecté</span>
+            <span id="roomIdDisplay"></span>
+            <span id="inviteStatus"></span>
+        </div>
+
+        <div class="infos">
+            <span id="start"></span>
+            <span id="target"></span>
+            <span id="clicks">0 clic</span>
+            <span id="timer">0 s</span>
+        </div>
+
+        <div id="players"></div>
+    </div>
+
+    <div id="article">
+        <h2>Bienvenue sur WikiRace P2P</h2>
+        <p>Crée un lobby ou rejoins un ami avec son lien d'invitation.</p>
+    </div>
+
 </div>
 
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
