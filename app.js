@@ -28,15 +28,13 @@ let connections = [];
 
 let isHost = false;
 let gameStarted = false;
+let localFinished = false;
 
 let localPlayerId = "";
 let localNickname = "";
+let playerPath = [];
 
 let players = [];
-
-// ---------------------
-// Éléments HTML
-// ---------------------
 
 const nicknameInput = document.getElementById("nicknameInput");
 const roomIdInput = document.getElementById("roomIdInput");
@@ -44,147 +42,85 @@ const createRoomButton = document.getElementById("createRoom");
 const joinRoomButton = document.getElementById("joinRoom");
 const copyInviteButton = document.getElementById("copyInvite");
 const newGameButton = document.getElementById("newGame");
+const restartGameButton = document.getElementById("restartGame");
 const peerStatus = document.getElementById("peerStatus");
 const roomIdDisplay = document.getElementById("roomIdDisplay");
 const inviteStatus = document.getElementById("inviteStatus");
 const playersContainer = document.getElementById("players");
 
-// ---------------------
-// Utils
-// ---------------------
-
 function getNickname() {
-    const nickname = nicknameInput.value.trim();
-
-    if (nickname) {
-        return nickname;
-    }
-
-    return "Joueur";
+    return nicknameInput.value.trim() || "Joueur";
 }
 
 function getInviteLink() {
     const url = new URL(window.location.href);
-
     url.searchParams.set("room", roomIdInput.value.trim());
-
     return url.toString();
 }
 
 async function copyInviteLink() {
-    const inviteLink = getInviteLink();
+    const link = getInviteLink();
 
     try {
-        await navigator.clipboard.writeText(inviteLink);
-
+        await navigator.clipboard.writeText(link);
         inviteStatus.textContent = "Lien copié !";
     }
-    catch (error) {
-        console.error(error);
-
-        prompt("Copie ce lien :", inviteLink);
+    catch {
+        prompt("Copie ce lien :", link);
     }
 }
 
 function getRoomFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-
-    return params.get("room");
+    return new URLSearchParams(window.location.search).get("room");
 }
 
 function sendToHost(type, data = {}) {
     if (hostConnection && hostConnection.open) {
-        hostConnection.send({
-            type,
-            data
-        });
+        hostConnection.send({ type, data });
     }
 }
 
 function sendToAll(type, data = {}) {
     connections.forEach(connection => {
         if (connection.open) {
-            connection.send({
-                type,
-                data
-            });
+            connection.send({ type, data });
         }
     });
 }
 
 function sendToOne(connection, type, data = {}) {
     if (connection && connection.open) {
-        connection.send({
-            type,
-            data
-        });
+        connection.send({ type, data });
     }
 }
-
-function updateLocalPlayer() {
-    const player = players.find(item => item.id === localPlayerId);
-
-    if (!player) {
-        return;
-    }
-
-    player.clicks = clicks;
-    player.seconds = seconds;
-    player.currentPage = currentPage;
-}
-
-// ---------------------
-// Validation article
-// ---------------------
 
 function isValidWikiArticle(title) {
-    if (!title) {
-        return false;
-    }
-
-    if (title.startsWith("#")) {
-        return false;
-    }
-
-    if (title.includes(":")) {
-        return false;
-    }
+    if (!title) return false;
+    if (title.startsWith("#")) return false;
+    if (title.includes(":")) return false;
 
     for (const prefix of FORBIDDEN_PREFIXES) {
-        if (title.startsWith(prefix)) {
-            return false;
-        }
+        if (title.startsWith(prefix)) return false;
     }
 
     return true;
 }
 
-// ---------------------
-// Tirage article
-// ---------------------
-
 function randomCasualPage() {
-    return CASUAL_PAGES[
-        Math.floor(Math.random() * CASUAL_PAGES.length)
-    ];
+    return CASUAL_PAGES[Math.floor(Math.random() * CASUAL_PAGES.length)];
 }
-
-// ---------------------
-// Timer
-// ---------------------
 
 function startTimer() {
     clearInterval(timer);
 
     seconds = 0;
-
     document.getElementById("timer").textContent = "0 s";
 
     timer = setInterval(() => {
+        if (localFinished) return;
+
         seconds++;
-
         document.getElementById("timer").textContent = seconds + " s";
-
         sendProgress();
     }, 1000);
 }
@@ -193,77 +129,79 @@ function stopTimer() {
     clearInterval(timer);
 }
 
-// ---------------------
-// Progression
-// ---------------------
+function updateLocalPlayer() {
+    const player = players.find(item => item.id === localPlayerId);
+
+    if (!player) return;
+
+    player.clicks = clicks;
+    player.seconds = seconds;
+    player.currentPage = currentPage;
+    player.finished = localFinished;
+    player.path = playerPath;
+}
 
 function sendProgress() {
-    if (!gameStarted) {
-        return;
-    }
+    if (!gameStarted) return;
 
     updateLocalPlayer();
 
     if (isHost) {
         broadcastRoomUpdate();
+        checkAllFinished();
     }
     else {
         sendToHost("player:progress", {
             id: localPlayerId,
             currentPage,
             clicks,
-            seconds
+            seconds,
+            finished: localFinished,
+            path: playerPath
         });
     }
 }
 
-// ---------------------
-// Victoire
-// ---------------------
-
 function checkVictory() {
-    if (currentPage === targetPage && gameStarted) {
+    if (currentPage === targetPage && gameStarted && !localFinished) {
+        localFinished = true;
         stopTimer();
-
-        gameStarted = false;
-
-        const player = players.find(item => item.id === localPlayerId);
-
-        if (player) {
-            player.finished = true;
-            player.clicks = clicks;
-            player.seconds = seconds;
-            player.currentPage = currentPage;
-        }
+        sendProgress();
 
         if (isHost) {
-            sendToAll("game:winner", {
-                nickname: localNickname,
-                clicks,
-                seconds
-            });
-
-            broadcastRoomUpdate();
+            checkAllFinished();
         }
         else {
             sendToHost("player:victory", {
                 id: localPlayerId,
                 clicks,
-                seconds
+                seconds,
+                path: playerPath
             });
         }
 
         alert(
-            "🏆 Victoire !\n\n" +
+            "🏆 Tu as trouvé le mot !\n\n" +
             "Temps : " + seconds + " s\n" +
-            "Clics : " + clicks
+            "Clics : " + clicks + "\n\n" +
+            "Les autres joueurs peuvent continuer."
         );
     }
 }
 
-// ---------------------
-// Charger article
-// ---------------------
+function checkAllFinished() {
+    if (!isHost || !gameStarted) return;
+    if (players.length === 0) return;
+
+    const everyoneFinished = players.every(player => player.finished);
+
+    if (everyoneFinished) {
+        gameStarted = false;
+        sendToAll("game:finished", { players });
+        showFinalResults(players);
+        broadcastRoomUpdate();
+    }
+}
 
 async function loadArticle(title) {
     currentPage = title;
@@ -279,15 +217,12 @@ async function loadArticle(title) {
         }
 
         const html = await response.text();
-
         const article = document.getElementById("article");
 
         article.innerHTML = html;
 
         rewriteLinks();
-
         sendProgress();
-
         checkVictory();
 
         window.scrollTo(0, 0);
@@ -297,13 +232,9 @@ async function loadArticle(title) {
 
         document.getElementById("article").innerHTML =
             "<h2>Erreur lors du chargement</h2>" +
-            "<p>Vérifie que tu utilises Live Server ou GitHub Pages, pas file://.</p>";
+            "<p>Vérifie que tu utilises Live Server ou GitHub Pages.</p>";
     }
 }
-
-// ---------------------
-// Réécriture liens
-// ---------------------
 
 function rewriteLinks() {
     const links = document.querySelectorAll("#article a");
@@ -311,9 +242,7 @@ function rewriteLinks() {
     links.forEach(link => {
         const href = link.getAttribute("href");
 
-        if (!href) {
-            return;
-        }
+        if (!href) return;
 
         if (!href.startsWith("./")) {
             link.style.color = "#999";
@@ -322,9 +251,7 @@ function rewriteLinks() {
         }
 
         let page = href.replace("./", "");
-
         page = page.split("#")[0];
-
         page = decodeURIComponent(page);
 
         if (!isValidWikiArticle(page)) {
@@ -337,23 +264,19 @@ function rewriteLinks() {
         link.addEventListener("click", event => {
             event.preventDefault();
 
-            if (!gameStarted) {
-                return;
-            }
+            if (!gameStarted || localFinished) return;
 
             clicks++;
 
             document.getElementById("clicks").textContent =
                 clicks + " clics";
 
+            playerPath.push(page);
+
             loadArticle(page);
         });
     });
 }
-
-// ---------------------
-// Affichage joueurs
-// ---------------------
 
 function renderPlayers() {
     playersContainer.innerHTML = "";
@@ -363,19 +286,12 @@ function renderPlayers() {
 
         card.className = "player-card";
 
-        if (player.host) {
-            card.classList.add("host");
-        }
-
-        if (player.finished) {
-            card.classList.add("finished");
-        }
+        if (player.host) card.classList.add("host");
+        if (player.finished) card.classList.add("finished");
 
         let text = player.nickname;
 
-        if (player.host) {
-            text += " 👑";
-        }
+        if (player.host) text += " 👑";
 
         text += " — " + player.clicks + " clics";
 
@@ -388,14 +304,9 @@ function renderPlayers() {
         }
 
         card.textContent = text;
-
         playersContainer.appendChild(card);
     });
 }
-
-// ---------------------
-// Synchronisation lobby
-// ---------------------
 
 function getRoomState() {
     return {
@@ -417,13 +328,45 @@ function applyRoomState(state) {
 
 function broadcastRoomUpdate() {
     renderPlayers();
-
     sendToAll("room:update", getRoomState());
 }
 
-// ---------------------
-// Création lobby
-// ---------------------
+function showFinalResults(finalPlayers) {
+    const sortedPlayers = [...finalPlayers].sort((a, b) => {
+        if (a.seconds !== b.seconds) return a.seconds - b.seconds;
+        return a.clicks - b.clicks;
+    });
+
+    let html = "<div class='results'>";
+    html += "<h2>🏁 Résultats de la partie</h2>";
+    html += "<p><strong>Départ :</strong> " + startPage + "</p>";
+    html += "<p><strong>Objectif :</strong> " + targetPage + "</p>";
+
+    sortedPlayers.forEach((player, index) => {
+        html += "<div class='result-card'>";
+        html += "<h3>#" + (index + 1) + " — " + player.nickname + "</h3>";
+        html += "<p>" + player.seconds + " s — " + player.clicks + " clics</p>";
+
+        html += "<div class='path'>";
+
+        const path = player.path || [];
+
+        path.forEach((page, pageIndex) => {
+            html += page;
+
+            if (pageIndex < path.length - 1) {
+                html += " → ";
+            }
+        });
+
+        html += "</div>";
+        html += "</div>";
+    });
+
+    html += "</div>";
+
+    document.getElementById("article").innerHTML = html;
+}
 
 createRoomButton.addEventListener("click", () => {
     isHost = true;
@@ -434,7 +377,6 @@ createRoomButton.addEventListener("click", () => {
     peerStatus.textContent = "Création du lobby...";
 
     peer.on("open", id => {
-        console.log("Lobby créé :", id);
         localPlayerId = id;
 
         players = [
@@ -445,7 +387,8 @@ createRoomButton.addEventListener("click", () => {
                 seconds: 0,
                 currentPage: "",
                 finished: false,
-                host: true
+                host: true,
+                path: []
             }
         ];
 
@@ -455,6 +398,7 @@ createRoomButton.addEventListener("click", () => {
 
         copyInviteButton.disabled = false;
         newGameButton.disabled = false;
+        restartGameButton.disabled = false;
 
         renderPlayers();
     });
@@ -474,10 +418,10 @@ createRoomButton.addEventListener("click", () => {
 
         connection.on("close", () => {
             connections = connections.filter(item => item !== connection);
-
             players = players.filter(player => player.connectionId !== connection.connectionId);
 
             broadcastRoomUpdate();
+            checkAllFinished();
         });
     });
 
@@ -487,15 +431,7 @@ createRoomButton.addEventListener("click", () => {
     });
 });
 
-// ---------------------
-// Copier invitation
-// ---------------------
-
 copyInviteButton.addEventListener("click", copyInviteLink);
-
-// ---------------------
-// Rejoindre lobby
-// ---------------------
 
 function joinRoom(roomIdFromLink = "") {
     const roomId = roomIdFromLink || roomIdInput.value.trim();
@@ -551,10 +487,6 @@ joinRoomButton.addEventListener("click", () => {
     joinRoom();
 });
 
-// ---------------------
-// Messages côté hôte
-// ---------------------
-
 function handleHostMessage(connection, message) {
     const type = message.type;
     const data = message.data || {};
@@ -573,7 +505,8 @@ function handleHostMessage(connection, message) {
                 seconds: 0,
                 currentPage: "",
                 finished: false,
-                host: false
+                host: false,
+                path: []
             });
         }
 
@@ -588,9 +521,12 @@ function handleHostMessage(connection, message) {
             player.currentPage = data.currentPage;
             player.clicks = data.clicks;
             player.seconds = data.seconds;
+            player.finished = data.finished;
+            player.path = data.path || [];
         }
 
         broadcastRoomUpdate();
+        checkAllFinished();
     }
 
     if (type === "player:victory") {
@@ -600,21 +536,19 @@ function handleHostMessage(connection, message) {
             player.finished = true;
             player.clicks = data.clicks;
             player.seconds = data.seconds;
+            player.path = data.path || [];
         }
 
-        sendToAll("game:winner", {
+        sendToAll("player:found", {
             nickname: player ? player.nickname : "Un joueur",
             clicks: data.clicks,
             seconds: data.seconds
         });
 
         broadcastRoomUpdate();
+        checkAllFinished();
     }
 }
-
-// ---------------------
-// Messages côté client
-// ---------------------
 
 function handleClientMessage(message) {
     const type = message.type;
@@ -633,25 +567,25 @@ function handleClientMessage(message) {
         startClientGame(data);
     }
 
-    if (type === "game:winner") {
+    if (type === "player:found") {
+        alert(
+            "✅ " + data.nickname + " a trouvé le mot !\n\n" +
+            "Temps : " + data.seconds + " s\n" +
+            "Clics : " + data.clicks + "\n\n" +
+            "La partie continue pour les autres."
+        );
+    }
+
+    if (type === "game:finished") {
         gameStarted = false;
         stopTimer();
-
-        alert(
-            "🏆 " + data.nickname + " a gagné !\n\n" +
-            "Temps : " + data.seconds + " s\n" +
-            "Clics : " + data.clicks
-        );
+        showFinalResults(data.players || []);
     }
 }
 
-// ---------------------
-// Nouvelle partie hôte
-// ---------------------
-
-function newGame() {
+function startNewRound() {
     if (!isHost) {
-        alert("Seul l'hôte peut lancer la partie.");
+        alert("Seul l'hôte peut lancer ou restart la partie.");
         return;
     }
 
@@ -663,17 +597,20 @@ function newGame() {
     while (targetPage === startPage);
 
     gameStarted = true;
+    localFinished = false;
 
     players.forEach(player => {
         player.clicks = 0;
         player.seconds = 0;
         player.currentPage = startPage;
         player.finished = false;
+        player.path = [startPage];
     });
 
     clicks = 0;
     seconds = 0;
     currentPage = startPage;
+    playerPath = [startPage];
 
     document.getElementById("clicks").textContent = "0 clic";
     document.getElementById("timer").textContent = "0 s";
@@ -695,15 +632,11 @@ function newGame() {
     broadcastRoomUpdate();
 
     startTimer();
-
     loadArticle(startPage);
 }
 
-newGameButton.addEventListener("click", newGame);
-
-// ---------------------
-// Début partie client
-// ---------------------
+newGameButton.addEventListener("click", startNewRound);
+restartGameButton.addEventListener("click", startNewRound);
 
 function startClientGame(data) {
     startPage = data.startPage;
@@ -713,6 +646,8 @@ function startClientGame(data) {
     clicks = 0;
     seconds = 0;
     gameStarted = true;
+    localFinished = false;
+    playerPath = [startPage];
 
     document.getElementById("clicks").textContent = "0 clic";
     document.getElementById("timer").textContent = "0 s";
@@ -727,13 +662,8 @@ function startClientGame(data) {
         "<h2>Chargement de la partie...</h2>";
 
     startTimer();
-
     loadArticle(startPage);
 }
-
-// ---------------------
-// Connexion automatique via lien
-// ---------------------
 
 window.addEventListener("load", () => {
     const roomFromUrl = getRoomFromUrl();

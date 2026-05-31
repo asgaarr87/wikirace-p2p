@@ -56,7 +56,7 @@ button:disabled {
 }
 
 #inviteStatus {
-    color: #008000;
+    color: green;
     font-weight: bold;
 }
 
@@ -97,4 +97,21 @@ button:disabled {
 #article a {
     color: #0645ad;
     cursor: pointer;
+}
+
+.results {
+    padding: 20px;
+}
+
+.result-card {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    background: #f8f8f8;
+}
+
+.path {
+    margin-top: 8px;
+    line-height: 1.6;
 }
