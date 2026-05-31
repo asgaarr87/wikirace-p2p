@@ -13,11 +13,8 @@
     <div class="name-card">
         <h1>WikiRace P2P</h1>
         <p>Entre ton pseudo pour commencer.</p>
-
         <input id="nicknameInput" placeholder="Ton pseudo" maxlength="20">
-
         <button id="confirmNickname">Continuer</button>
-
         <p id="nameHint"></p>
     </div>
 </div>
@@ -40,6 +37,16 @@
         </div>
 
         <div class="game-actions">
+            <select id="startModeSelect">
+                <option value="casual">Départ : liste casual</option>
+                <option value="wikipedia">Départ : Wikipédia aléatoire</option>
+            </select>
+
+            <select id="targetModeSelect">
+                <option value="casual">Objectif : liste casual</option>
+                <option value="wikipedia">Objectif : Wikipédia aléatoire</option>
+            </select>
+
             <button id="newGame" disabled>Lancer la partie</button>
             <button id="restartGame" disabled>Restart</button>
         </div>

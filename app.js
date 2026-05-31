@@ -36,6 +36,9 @@ let playerPath = [];
 
 let players = [];
 
+let startMode = "casual";
+let targetMode = "casual";
+
 const nameScreen = document.getElementById("nameScreen");
 const gameScreen = document.getElementById("gameScreen");
 const nicknameInput = document.getElementById("nicknameInput");
@@ -49,6 +52,9 @@ const joinRoomButton = document.getElementById("joinRoom");
 const copyInviteButton = document.getElementById("copyInvite");
 const newGameButton = document.getElementById("newGame");
 const restartGameButton = document.getElementById("restartGame");
+const startModeSelect = document.getElementById("startModeSelect");
+const targetModeSelect = document.getElementById("targetModeSelect");
+
 const peerStatus = document.getElementById("peerStatus");
 const roomIdDisplay = document.getElementById("roomIdDisplay");
 const inviteStatus = document.getElementById("inviteStatus");
@@ -147,6 +153,48 @@ function isValidWikiArticle(title) {
 
 function randomCasualPage() {
     return CASUAL_PAGES[Math.floor(Math.random() * CASUAL_PAGES.length)];
+}
+
+async function randomWikipediaPage() {
+    let attempts = 0;
+
+    while (attempts < 25) {
+        attempts++;
+
+        try {
+            const response = await fetch("https://fr.wikipedia.org/api/rest_v1/page/random/summary");
+
+            if (!response.ok) {
+                throw new Error("Erreur API Wikipédia");
+            }
+
+            const data = await response.json();
+            const title = data.title;
+
+            if (
+                isValidWikiArticle(title) &&
+                data.type === "standard" &&
+                data.extract &&
+                data.extract.length > 80 &&
+                title.length <= 70
+            ) {
+                return title;
+            }
+        }
+        catch (error) {
+            console.error(error);
+        }
+    }
+
+    return randomCasualPage();
+}
+
+async function randomPageByMode(mode) {
+    if (mode === "wikipedia") {
+        return await randomWikipediaPage();
+    }
+
+    return randomCasualPage();
 }
 
 function startTimer() {
@@ -352,7 +400,9 @@ function getRoomState() {
         players,
         startPage,
         targetPage,
-        gameStarted
+        gameStarted,
+        startMode,
+        targetMode
     };
 }
 
@@ -361,6 +411,11 @@ function applyRoomState(state) {
     startPage = state.startPage || "";
     targetPage = state.targetPage || "";
     gameStarted = state.gameStarted || false;
+    startMode = state.startMode || "casual";
+    targetMode = state.targetMode || "casual";
+
+    startModeSelect.value = startMode;
+    targetModeSelect.value = targetMode;
 
     renderPlayers();
 }
@@ -406,8 +461,36 @@ function showFinalResults(finalPlayers) {
     document.getElementById("article").innerHTML = html;
 }
 
+function updateModeFromSelects() {
+    startMode = startModeSelect.value;
+    targetMode = targetModeSelect.value;
+}
+
+function handleModeChange() {
+    if (!isHost) {
+        startModeSelect.value = startMode;
+        targetModeSelect.value = targetMode;
+        alert("Seul l'hôte peut changer les listes de mots.");
+        return;
+    }
+
+    if (gameStarted) {
+        startModeSelect.value = startMode;
+        targetModeSelect.value = targetMode;
+        alert("Impossible de changer les listes pendant une partie.");
+        return;
+    }
+
+    updateModeFromSelects();
+    broadcastRoomUpdate();
+}
+
+startModeSelect.addEventListener("change", handleModeChange);
+targetModeSelect.addEventListener("change", handleModeChange);
+
 createRoomButton.addEventListener("click", () => {
     isHost = true;
+    updateModeFromSelects();
 
     peer = new Peer();
 
@@ -436,6 +519,8 @@ createRoomButton.addEventListener("click", () => {
         copyInviteButton.disabled = false;
         newGameButton.disabled = false;
         restartGameButton.disabled = false;
+        startModeSelect.disabled = false;
+        targetModeSelect.disabled = false;
 
         renderPlayers();
     });
@@ -479,6 +564,8 @@ function joinRoom(roomIdFromLink = "") {
     }
 
     isHost = false;
+    startModeSelect.disabled = true;
+    targetModeSelect.disabled = true;
 
     peer = new Peer();
 
@@ -619,16 +706,26 @@ function handleClientMessage(message) {
     }
 }
 
-function startNewRound() {
+async function startNewRound() {
     if (!isHost) {
         alert("Seul l'hôte peut lancer ou restart la partie.");
         return;
     }
 
-    startPage = randomCasualPage();
+    if (gameStarted) {
+        const confirmRestart = confirm("Une partie est déjà en cours. Restart ?");
+        if (!confirmRestart) return;
+    }
+
+    updateModeFromSelects();
+
+    document.getElementById("article").innerHTML =
+        "<h2>Chargement de la partie...</h2>";
+
+    startPage = await randomPageByMode(startMode);
 
     do {
-        targetPage = randomCasualPage();
+        targetPage = await randomPageByMode(targetMode);
     }
     while (targetPage === startPage);
 
@@ -657,12 +754,11 @@ function startNewRound() {
     document.getElementById("target").textContent =
         "Objectif : " + targetPage;
 
-    document.getElementById("article").innerHTML =
-        "<h2>Chargement de la partie...</h2>";
-
     sendToAll("game:start", {
         startPage,
-        targetPage
+        targetPage,
+        startMode,
+        targetMode
     });
 
     broadcastRoomUpdate();
@@ -677,6 +773,12 @@ restartGameButton.addEventListener("click", startNewRound);
 function startClientGame(data) {
     startPage = data.startPage;
     targetPage = data.targetPage;
+    startMode = data.startMode || "casual";
+    targetMode = data.targetMode || "casual";
+
+    startModeSelect.value = startMode;
+    targetModeSelect.value = targetMode;
+
     currentPage = startPage;
 
     clicks = 0;
