@@ -29,6 +29,7 @@ let connections = [];
 let isHost = false;
 let gameStarted = false;
 let localFinished = false;
+let localAbandoned = false;
 
 let localPlayerId = "";
 let localNickname = "";
@@ -52,12 +53,14 @@ const joinRoomButton = document.getElementById("joinRoom");
 const copyInviteButton = document.getElementById("copyInvite");
 const newGameButton = document.getElementById("newGame");
 const restartGameButton = document.getElementById("restartGame");
+const giveUpButton = document.getElementById("giveUpButton");
 const startModeSelect = document.getElementById("startModeSelect");
 const targetModeSelect = document.getElementById("targetModeSelect");
 
 const peerStatus = document.getElementById("peerStatus");
 const roomIdDisplay = document.getElementById("roomIdDisplay");
 const inviteStatus = document.getElementById("inviteStatus");
+const finishStatus = document.getElementById("finishStatus");
 const playersContainer = document.getElementById("players");
 
 function getRoomFromUrl() {
@@ -225,7 +228,22 @@ function updateLocalPlayer() {
     player.seconds = seconds;
     player.currentPage = currentPage;
     player.finished = localFinished;
+    player.abandoned = localAbandoned;
     player.path = playerPath;
+}
+
+function updateFinishStatus() {
+    if (!finishStatus) return;
+
+    const finishedCount = players.filter(player => player.finished).length;
+    const total = players.length;
+
+    if (total === 0) {
+        finishStatus.textContent = "";
+        return;
+    }
+
+    finishStatus.textContent = "Terminés : " + finishedCount + "/" + total;
 }
 
 function sendProgress() {
@@ -244,6 +262,7 @@ function sendProgress() {
             clicks,
             seconds,
             finished: localFinished,
+            abandoned: localAbandoned,
             path: playerPath
         });
     }
@@ -252,7 +271,14 @@ function sendProgress() {
 function checkVictory() {
     if (currentPage === targetPage && gameStarted && !localFinished) {
         localFinished = true;
+        localAbandoned = false;
+
         stopTimer();
+
+        if (giveUpButton) {
+            giveUpButton.disabled = true;
+        }
+
         sendProgress();
 
         if (isHost) {
@@ -276,14 +302,64 @@ function checkVictory() {
     }
 }
 
+function giveUp() {
+    if (!gameStarted || localFinished) {
+        return;
+    }
+
+    const confirmGiveUp = confirm("Tu veux vraiment abandonner cette partie ?");
+
+    if (!confirmGiveUp) {
+        return;
+    }
+
+    localFinished = true;
+    localAbandoned = true;
+
+    stopTimer();
+
+    if (giveUpButton) {
+        giveUpButton.disabled = true;
+    }
+
+    updateLocalPlayer();
+
+    if (isHost) {
+        broadcastRoomUpdate();
+        checkAllFinished();
+    }
+    else {
+        sendToHost("player:giveup", {
+            id: localPlayerId,
+            clicks,
+            seconds,
+            currentPage,
+            path: playerPath
+        });
+    }
+
+    alert("Tu as abandonné. Ton trajet sera affiché à la fin.");
+}
+
+if (giveUpButton) {
+    giveUpButton.addEventListener("click", giveUp);
+}
+
 function checkAllFinished() {
     if (!isHost || !gameStarted) return;
     if (players.length === 0) return;
+
+    updateFinishStatus();
 
     const everyoneFinished = players.every(player => player.finished);
 
     if (everyoneFinished) {
         gameStarted = false;
+
+        if (giveUpButton) {
+            giveUpButton.disabled = true;
+        }
+
         sendToAll("game:finished", { players });
         showFinalResults(players);
         broadcastRoomUpdate();
@@ -386,13 +462,18 @@ function renderPlayers() {
             text += " — " + player.currentPage;
         }
 
-        if (player.finished) {
+        if (player.abandoned) {
+            text += " ❌ Abandon";
+        }
+        else if (player.finished) {
             text += " ✅";
         }
 
         card.textContent = text;
         playersContainer.appendChild(card);
     });
+
+    updateFinishStatus();
 }
 
 function getRoomState() {
@@ -427,6 +508,9 @@ function broadcastRoomUpdate() {
 
 function showFinalResults(finalPlayers) {
     const sortedPlayers = [...finalPlayers].sort((a, b) => {
+        if (a.abandoned && !b.abandoned) return 1;
+        if (!a.abandoned && b.abandoned) return -1;
+
         if (a.seconds !== b.seconds) return a.seconds - b.seconds;
         return a.clicks - b.clicks;
     });
@@ -438,11 +522,27 @@ function showFinalResults(finalPlayers) {
 
     sortedPlayers.forEach((player, index) => {
         html += "<div class='result-card'>";
-        html += "<h3>#" + (index + 1) + " — " + player.nickname + "</h3>";
+
+        if (player.abandoned) {
+            html += "<h3>❌ Abandon — " + player.nickname + "</h3>";
+        }
+        else {
+            html += "<h3>#" + (index + 1) + " — " + player.nickname + "</h3>";
+        }
+
         html += "<p>" + player.seconds + " s — " + player.clicks + " clics</p>";
+
+        if (player.abandoned && player.currentPage) {
+            html += "<p><strong>Dernière page :</strong> " + player.currentPage + "</p>";
+        }
+
         html += "<div class='path'>";
 
         const path = player.path || [];
+
+        if (path.length === 0) {
+            html += "Aucun trajet enregistré.";
+        }
 
         path.forEach((page, pageIndex) => {
             html += page;
@@ -507,6 +607,7 @@ createRoomButton.addEventListener("click", () => {
                 seconds: 0,
                 currentPage: "",
                 finished: false,
+                abandoned: false,
                 host: true,
                 path: []
             }
@@ -519,6 +620,11 @@ createRoomButton.addEventListener("click", () => {
         copyInviteButton.disabled = false;
         newGameButton.disabled = false;
         restartGameButton.disabled = false;
+
+        if (giveUpButton) {
+            giveUpButton.disabled = true;
+        }
+
         startModeSelect.disabled = false;
         targetModeSelect.disabled = false;
 
@@ -597,6 +703,10 @@ function joinRoom(roomIdFromLink = "") {
             peerStatus.textContent = "Déconnecté du lobby";
             gameStarted = false;
             stopTimer();
+
+            if (giveUpButton) {
+                giveUpButton.disabled = true;
+            }
         });
     });
 
@@ -628,6 +738,7 @@ function handleHostMessage(connection, message) {
                 seconds: 0,
                 currentPage: "",
                 finished: false,
+                abandoned: false,
                 host: false,
                 path: []
             });
@@ -645,6 +756,7 @@ function handleHostMessage(connection, message) {
             player.clicks = data.clicks;
             player.seconds = data.seconds;
             player.finished = data.finished;
+            player.abandoned = data.abandoned;
             player.path = data.path || [];
         }
 
@@ -657,12 +769,35 @@ function handleHostMessage(connection, message) {
 
         if (player) {
             player.finished = true;
+            player.abandoned = false;
             player.clicks = data.clicks;
             player.seconds = data.seconds;
             player.path = data.path || [];
         }
 
         sendToAll("player:found", {
+            nickname: player ? player.nickname : "Un joueur",
+            clicks: data.clicks,
+            seconds: data.seconds
+        });
+
+        broadcastRoomUpdate();
+        checkAllFinished();
+    }
+
+    if (type === "player:giveup") {
+        const player = players.find(item => item.id === data.id);
+
+        if (player) {
+            player.finished = true;
+            player.abandoned = true;
+            player.clicks = data.clicks;
+            player.seconds = data.seconds;
+            player.currentPage = data.currentPage;
+            player.path = data.path || [];
+        }
+
+        sendToAll("player:gaveup", {
             nickname: player ? player.nickname : "Un joueur",
             clicks: data.clicks,
             seconds: data.seconds
@@ -699,9 +834,21 @@ function handleClientMessage(message) {
         );
     }
 
+    if (type === "player:gaveup") {
+        alert(
+            "❌ " + data.nickname + " a abandonné.\n\n" +
+            "La partie continue pour les autres."
+        );
+    }
+
     if (type === "game:finished") {
         gameStarted = false;
         stopTimer();
+
+        if (giveUpButton) {
+            giveUpButton.disabled = true;
+        }
+
         showFinalResults(data.players || []);
     }
 }
@@ -731,12 +878,14 @@ async function startNewRound() {
 
     gameStarted = true;
     localFinished = false;
+    localAbandoned = false;
 
     players.forEach(player => {
         player.clicks = 0;
         player.seconds = 0;
         player.currentPage = startPage;
         player.finished = false;
+        player.abandoned = false;
         player.path = [startPage];
     });
 
@@ -753,6 +902,10 @@ async function startNewRound() {
 
     document.getElementById("target").textContent =
         "Objectif : " + targetPage;
+
+    if (giveUpButton) {
+        giveUpButton.disabled = false;
+    }
 
     sendToAll("game:start", {
         startPage,
@@ -785,6 +938,7 @@ function startClientGame(data) {
     seconds = 0;
     gameStarted = true;
     localFinished = false;
+    localAbandoned = false;
     playerPath = [startPage];
 
     document.getElementById("clicks").textContent = "0 clic";
@@ -798,6 +952,10 @@ function startClientGame(data) {
 
     document.getElementById("article").innerHTML =
         "<h2>Chargement de la partie...</h2>";
+
+    if (giveUpButton) {
+        giveUpButton.disabled = false;
+    }
 
     startTimer();
     loadArticle(startPage);
